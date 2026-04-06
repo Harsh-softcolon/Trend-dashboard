@@ -14,11 +14,11 @@ export async function GET() {
     const tagCounts: Record<string, number> = {};
     const sourceCounts: Record<string, number> = {};
 
-    articles.forEach((art) => {
+    articles.forEach((art: any) => {
       const tagList = art.tags ? art.tags.split(",") : [];
       tagList.forEach((t: string) => {
         if (t.trim()) {
-           tagCounts[t.trim()] = (tagCounts[t.trim()] || 0) + 1;
+          tagCounts[t.trim()] = (tagCounts[t.trim()] || 0) + 1;
         }
       });
       const sourceName = art.source.name;
@@ -34,7 +34,13 @@ export async function GET() {
       sourceCounts,
     });
   } catch (error: any) {
-    console.error("Stats API error:", error instanceof Error ? error.message : error);
-    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+    console.error(
+      "Stats API error:",
+      error instanceof Error ? error.message : error,
+    );
+    return NextResponse.json(
+      { error: "Failed to fetch stats" },
+      { status: 500 },
+    );
   }
 }

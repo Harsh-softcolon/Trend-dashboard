@@ -5,13 +5,13 @@ import { fetchDevToArticles } from "@/lib/scrapers/devto";
 import { fetchHashnodeArticles } from "@/lib/scrapers/hashnode";
 import { fetchDailyPosts } from "@/lib/scrapers/dailydev";
 import { calculateTrendingScore } from "@/lib/scoring";
-import { NormalizedArticle } from "@/types";
+import { NormalizedArticle, SourceType } from "@/types";
 
 export async function syncTrends() {
   console.log("🚀 Starting PRODUCTION trend sync...");
 
   // 1. Ensure sources exist in DB
-  const sources = [
+  const sources: Array<{ name: SourceType; type: string; baseUrl: string }> = [
     { name: "reddit", type: "api", baseUrl: "https://reddit.com" },
     { name: "hn", type: "api", baseUrl: "https://news.ycombinator.com" },
     { name: "devto", type: "api", baseUrl: "https://dev.to" },
@@ -24,7 +24,11 @@ export async function syncTrends() {
     const record = await prisma.source.upsert({
       where: { name: s.name },
       update: {},
-      create: s,
+      create: {
+        name: s.name,
+        type: s.type,
+        baseUrl: s.baseUrl,
+      },
     });
     sourceMap[s.name] = record.id;
   }
@@ -51,11 +55,17 @@ export async function syncTrends() {
   // 3. Process and upsert articles
   const syncPromises = allArticles.map(async (art) => {
     try {
-      const trendingScore = calculateTrendingScore(art.rawScore, art.commentsCount, art.publishedAt);
+      const trendingScore = calculateTrendingScore(
+        art.rawScore,
+        art.commentsCount,
+        art.publishedAt,
+      );
       const sourceId = sourceMap[art.source];
 
       if (!sourceId) {
-        console.warn(`Source ${art.source} not found in map, skipping article ${art.id}`);
+        console.warn(
+          `Source ${art.source} not found in map, skipping article ${art.id}`,
+        );
         return null;
       }
 
@@ -92,16 +102,22 @@ export async function syncTrends() {
         },
       });
     } catch (err) {
-      console.error(`❌ Failed to sync article ${art.url}:`, err instanceof Error ? err.message : err);
+      console.error(
+        `❌ Failed to sync article ${art.url}:`,
+        err instanceof Error ? err.message : err,
+      );
       return null;
     }
   });
 
   const results = await Promise.all(syncPromises);
-  const successCount = results.filter(Boolean).length;
+  const successCount = results.filter(
+    (res: any): res is NonNullable<typeof res> => !!res,
+  ).length;
 
   console.log(`✅ Successfully synced ${successCount} articles.`);
-  
+
+  // 4. Record top trends
   if (successCount > 0) {
     const topArticles = await prisma.article.findMany({
       orderBy: { trendingScore: "desc" },
@@ -109,15 +125,15 @@ export async function syncTrends() {
     });
 
     await Promise.all(
-      topArticles.map((art, idx) => 
+      topArticles.map((art: { id: any; trendingScore: any }, idx: number) =>
         prisma.trend.create({
           data: {
             articleId: art.id,
             rank: idx + 1,
             score: art.trendingScore,
-          }
-        })
-      )
+          },
+        }),
+      ),
     );
   }
 
