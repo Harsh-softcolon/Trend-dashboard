@@ -14,7 +14,7 @@ export async function GET() {
     const tagCounts: Record<string, number> = {};
     const sourceCounts: Record<string, number> = {};
 
-    articles.forEach((art: any) => {
+    articles.forEach((art) => {
       const tagList = art.tags ? art.tags.split(",") : [];
       tagList.forEach((t: string) => {
         if (t.trim()) {
