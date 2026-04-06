@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Source {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique // HackerNews, Reddit, DevTo, Hashnode
+  type      String    // api, rss, scraper
+  baseUrl   String?
+  articles  Article[]
+  createdAt DateTime  @default(now())
+}
+
+model Article {
+  id            String   @id // Unique ID from source or generated
+  sourceId      Int
+  source        Source   @relation(fields: [sourceId], references: [id])
+  
+  title         String
+  url           String   @unique
+  slug          String?
+
+  authorName    String?
+  authorUrl     String?
+  sourceName    String?  // Optional source name if different from the Source model (e.g., subreddit)
+
+  description   String?
+  coverImage    String?
+
+  tags          String?  // Stored as comma-separated or JSON string for SQLite
+
+  publishedAt   DateTime
+  fetchedAt     DateTime @default(now())
+
+  score         Int      @default(0) // Normalized/weighted score
+  rawScore      Int      @default(0) // Original (HN points, Reddit upvotes)
+
+  commentsCount Int      @default(0)
+  likesCount    Int      @default(0)
+
+  trendingScore Float    @default(0)
+  isTrending    Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+  trends        Trend[]
+}
+
+model Trend {
+  id          Int      @id @default(autoincrement())
+  articleId   String
+  article     Article  @relation(fields: [articleId], references: [id])
+  
+  rank        Int
+  score       Float
+  timestamp   DateTime @default(now())
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  preferences String?  // JSON string: ["frontend", "ai"]
+  createdAt   DateTime @default(now())
+}

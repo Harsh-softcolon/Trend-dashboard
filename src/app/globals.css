@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #fcf9f8;
+  --color-foreground: #323233;
+  
+  /* DevPulse Editorial Palette */
+  --color-surface: #fcf9f8;
+  --color-surface-container: #f0eded;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container-high: #eae8e7;
+  --color-surface-container-highest: #e4e2e2;
+  --color-surface-container-lowest: #ffffff;
+  
+  --color-primary: #545f72;
+  --color-primary-container: #d8e3fa;
+  --color-on-primary: #f6f7ff;
+  --color-on-surface: #323233;
+  --color-on-surface-variant: #5f5f5f;
+  
+  --color-secondary: #5d5f65;
+  --color-secondary-container: #e1e2e9;
+  
+  --color-tertiary: #5c5d78;
+  --color-tertiary-container: #dbdafb;
+  
+  --color-outline: #7b7b7a;
+  --color-outline-variant: #b2b2b1;
+  
+  --color-error: #9f403d;
+  --color-error-container: #fe8983;
+
+  /* DevPulse Typography Mapping */
+  --font-headline: var(--font-newsreader), serif;
+  --font-body: var(--font-inter), sans-serif;
+  --font-label: var(--font-inter), sans-serif;
+}
+
+@utility squircle {
+  border-radius: 2rem;
+}
+
+body {
+  color: var(--color-foreground) !important;
+  background: var(--color-background) !important;
+  font-family: var(--font-body) !important;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .serif-display {
+  font-family: var(--font-headline) !important;
+}
+
+@layer base {
+  * {
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+}
+
+.glass {
+  background: rgba(252, 249, 248, 0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.card-hover {
+  @apply transition-all duration-500 hover:shadow-2xl hover:shadow-stone-200/40 hover:bg-white;
+}
+
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+.newspaper-divider {
+  @apply border-t border-outline-variant/10 py-6;
+}
