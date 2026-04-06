@@ -125,7 +125,7 @@ export async function syncTrends() {
     });
 
     await Promise.all(
-      topArticles.map((art, idx) =>
+      topArticles.map((art: { id: string; trendingScore: number }, idx: number) =>
         prisma.trend.create({
           data: {
             articleId: art.id,
