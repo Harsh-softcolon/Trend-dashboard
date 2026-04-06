@@ -5,7 +5,7 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 // In Prisma 7, the adapter handles database initialization via options object.
 const adapter = new PrismaBetterSqlite3({
-  url: "/Users/softcolon-harsh/Documents/learning/nextjs/trend-dashboard/dev.db",
+  url: "dev.db",
 });
 
 export const prisma =

@@ -9,6 +9,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: "file:/Users/softcolon-harsh/Documents/learning/nextjs/trend-dashboard/dev.db",
+    url: "file:./dev.db",
   },
 });
