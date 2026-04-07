@@ -4,6 +4,7 @@ import { fetchHNPosts } from "@/lib/scrapers/hackernews";
 import { fetchDevToArticles } from "@/lib/scrapers/devto";
 import { fetchHashnodeArticles } from "@/lib/scrapers/hashnode";
 import { fetchDailyPosts } from "@/lib/scrapers/dailydev";
+import { fetchRSSFeeds } from "@/lib/scrapers/rss";
 import { calculateTrendingScore } from "@/lib/scoring";
 import { NormalizedArticle, SourceType } from "@/types";
 
@@ -17,13 +18,17 @@ export async function syncTrends() {
     { name: "devto", type: "api", baseUrl: "https://dev.to" },
     { name: "hashnode", type: "api", baseUrl: "https://hashnode.com" },
     { name: "dailydev", type: "api", baseUrl: "https://daily.dev" },
+    { name: "rss", type: "rss", baseUrl: "Multiple RSS feeds" },
   ];
 
   const sourceMap: Record<string, number> = {};
   for (const s of sources) {
     const record = await prisma.source.upsert({
       where: { name: s.name },
-      update: {},
+      update: {
+        type: s.type,
+        baseUrl: s.baseUrl,
+      },
       create: {
         name: s.name,
         type: s.type,
@@ -35,12 +40,13 @@ export async function syncTrends() {
 
   // 2. Fetch from all sources in parallel
   console.log("📡 Fetching from all sources...");
-  const [reddit, hn, devto, hashnode, dailydev] = await Promise.all([
+  const [reddit, hn, devto, hashnode, dailydev, rss] = await Promise.all([
     fetchRedditPosts(),
     fetchHNPosts(),
     fetchDevToArticles(),
     fetchHashnodeArticles(),
     fetchDailyPosts(),
+    fetchRSSFeeds(),
   ]);
 
   const allArticles: NormalizedArticle[] = [
@@ -49,6 +55,7 @@ export async function syncTrends() {
     ...devto,
     ...hashnode,
     ...dailydev,
+    ...rss,
   ];
   console.log(`📦 Fetched ${allArticles.length} articles total.`);
 
@@ -131,6 +138,7 @@ export async function syncTrends() {
             articleId: art.id,
             rank: idx + 1,
             score: art.trendingScore,
+            timestamp: new Date()
           },
         }),
       ),

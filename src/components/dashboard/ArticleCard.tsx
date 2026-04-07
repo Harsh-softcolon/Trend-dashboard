@@ -46,6 +46,11 @@ export function ArticleCard({
           label: "Hashnode",
           color: "bg-secondary-container text-on-secondary-container",
         };
+      case "rss":
+        return {
+          label: sourceName || "Feed",
+          color: "bg-surface-container-highest text-on-surface-variant border border-outline-variant/30",
+        };
       default:
         return { label: source, color: "bg-stone-100 text-stone-500" };
     }

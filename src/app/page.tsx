@@ -151,7 +151,7 @@ function DashboardContent() {
           {syncStatus === "syncing" && (
             <div className="mt-8 flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
-              Fetching latest signals from Reddit, HN, Dev.to, Hashnode...
+              Fetching latest signals from Reddit, HN, Dev.to, Hashnode, RSS...
             </div>
           )}
         </section>

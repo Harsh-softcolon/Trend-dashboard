@@ -1,4 +1,4 @@
-export type SourceType = "reddit" | "hn" | "dailydev" | "devto" | "hashnode";
+export type SourceType = "reddit" | "hn" | "dailydev" | "devto" | "hashnode" | "rss";
 
 export type NormalizedArticle = {
   id: string;

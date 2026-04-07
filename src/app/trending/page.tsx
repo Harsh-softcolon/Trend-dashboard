@@ -46,6 +46,7 @@ function TrendingContent() {
     "hn",
     "devto",
     "hashnode",
+    "rss",
   ]);
   const [timeframe, setTimeframe] = useState("all");
   const [sort, setSort] = useState("trending");
@@ -229,6 +230,7 @@ function TrendingContent() {
                     { id: "hn", label: "HN", color: "bg-[#FF6600]" },
                     { id: "devto", label: "daily.dev", color: "bg-[#717786]" },
                     { id: "hashnode", label: "Hashnode", color: "bg-primary" },
+                    { id: "rss", label: "RSS Feeds", color: "bg-[#F26522]" },
                   ].map((s) => (
                     <label
                       key={s.id}
