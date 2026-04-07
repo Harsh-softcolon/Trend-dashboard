@@ -27,15 +27,19 @@ type Pagination = {
   hasMore: boolean;
 };
 
+type SyncStatus = "idle" | "syncing" | "done" | "error";
+
 function TrendingContent() {
   const searchParams = useSearchParams();
   const search = searchParams.get("search") || "";
-  
+
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
+  const [syncCount, setSyncCount] = useState<number | null>(null);
+
   // Filters
   const [sources, setSources] = useState<string[]>([
     "reddit",
@@ -63,7 +67,7 @@ function TrendingContent() {
     [loading, pagination],
   );
 
-  const fetchArticles = async (offset = 0) => {
+  const fetchArticles = async (offset = 0): Promise<number> => {
     setLoading(true);
     try {
       const sourcesParam = sources.join(",");
@@ -76,16 +80,44 @@ function TrendingContent() {
           offset === 0 ? data.articles : [...prev, ...data.articles],
         );
         setPagination(data.pagination);
+        return data.articles.length;
       }
     } catch (e) {
       console.error("Fetch Error:", e);
     } finally {
       setLoading(false);
     }
+    return 0;
+  };
+
+  const runSync = async () => {
+    if (syncStatus === "syncing") return;
+    setSyncStatus("syncing");
+    try {
+      const res = await fetch("/api/sync");
+      const data = await res.json();
+      if (data.success) {
+        setSyncCount(data.count);
+        setSyncStatus("done");
+        await fetchArticles(0);
+        setTimeout(() => setSyncStatus("idle"), 4000);
+      } else {
+        setSyncStatus("error");
+        setTimeout(() => setSyncStatus("idle"), 4000);
+      }
+    } catch {
+      setSyncStatus("error");
+      setTimeout(() => setSyncStatus("idle"), 4000);
+    }
   };
 
   useEffect(() => {
-    fetchArticles(0);
+    const init = async () => {
+      const count = await fetchArticles(0);
+      // Auto-sync if database is empty
+      if (count === 0) runSync();
+    };
+    init();
   }, [sources, timeframe, sort, search]);
 
   const toggleSource = (src: string) => {
@@ -93,6 +125,22 @@ function TrendingContent() {
       prev.includes(src) ? prev.filter((s) => s !== src) : [...prev, src],
     );
   };
+
+  const syncButtonLabel =
+    syncStatus === "idle"
+      ? "Sync"
+      : syncStatus === "syncing"
+      ? "Syncing..."
+      : syncStatus === "done"
+      ? `Done (${syncCount ?? 0})`
+      : "Retry";
+
+  const syncButtonIcon =
+    syncStatus === "done"
+      ? "check_circle"
+      : syncStatus === "error"
+      ? "error"
+      : "sync";
 
   return (
     <div className="min-h-screen bg-surface">
@@ -103,9 +151,34 @@ function TrendingContent() {
         <div className="p-4 sm:p-8 lg:p-16 pt-24 lg:pt-32 max-w-6xl mx-auto">
           {/* Page Header */}
           <div className="mb-12 lg:mb-24">
-            <p className="font-body text-[10px] font-bold uppercase tracking-[0.4em] text-primary mb-6 animate-in fade-in duration-700">
-              AGGREGATED SIGNALS
-            </p>
+            <div className="flex items-center justify-between mb-6">
+              <p className="font-body text-[10px] font-bold uppercase tracking-[0.4em] text-primary animate-in fade-in duration-700">
+                AGGREGATED SIGNALS
+              </p>
+              {/* Sync Button */}
+              <button
+                id="sync-button-trending"
+                onClick={runSync}
+                disabled={syncStatus === "syncing"}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.25em] border transition-all duration-300 cursor-default outline-none ${
+                  syncStatus === "done"
+                    ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                    : syncStatus === "error"
+                    ? "bg-red-50 text-red-500 border-red-200"
+                    : syncStatus === "syncing"
+                    ? "bg-primary/5 text-primary border-primary/20 opacity-70"
+                    : "bg-surface-container-low text-on-surface-variant border-outline-variant/20 hover:bg-white hover:border-outline-variant/40"
+                }`}
+              >
+                <span
+                  className={`material-symbols-outlined text-[14px] ${syncStatus === "syncing" ? "animate-spin" : ""}`}
+                >
+                  {syncButtonIcon}
+                </span>
+                <span>{syncButtonLabel}</span>
+              </button>
+            </div>
+
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 lg:gap-20">
               <div className="flex-1 min-w-0">
                 <h2 className="text-4xl sm:text-5xl lg:text-7xl font-semibold tracking-tighter text-on-surface mb-6 leading-tight sm:leading-[0.9] font-headline animate-in slide-in-from-bottom-2 duration-700 break-words">
@@ -114,7 +187,9 @@ function TrendingContent() {
                 <div className="flex items-center gap-4 mt-6">
                   <span className="w-8 sm:w-12 h-[1px] bg-outline-variant/30 shrink-0"></span>
                   <p className="text-on-surface-variant/70 text-[9px] sm:text-[11px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] truncate">
-                    Curated High-Velocity Intelligence.
+                    {syncStatus === "syncing"
+                      ? "Fetching latest signals from Reddit, HN, Dev.to..."
+                      : "Curated High-Velocity Intelligence."}
                   </p>
                 </div>
               </div>
@@ -207,26 +282,26 @@ function TrendingContent() {
             <section className="col-span-12 xl:col-span-9 space-y-12 lg:space-y-24">
               {/* Mobile Time Horizon (Sticky) */}
               <div className="xl:hidden sticky top-24 z-[35] bg-surface/95 backdrop-blur-sm py-4 border-b border-outline-variant/10 -mx-4 px-4 mb-8">
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                    {[
-                      { id: "24h", label: "24h" },
-                      { id: "7d", label: "7d" },
-                      { id: "30d", label: "30d" },
-                      { id: "all", label: "All" },
-                    ].map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => setTimeframe(t.id)}
-                        className={`px-6 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border cursor-default outline-none whitespace-nowrap ${
-                          timeframe === t.id
-                            ? "bg-on-surface text-surface border-on-surface shadow-sm"
-                            : "bg-surface text-on-surface-variant/40 border-outline-variant/20"
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                  {[
+                    { id: "24h", label: "24h" },
+                    { id: "7d", label: "7d" },
+                    { id: "30d", label: "30d" },
+                    { id: "all", label: "All" },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTimeframe(t.id)}
+                      className={`px-6 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border cursor-default outline-none whitespace-nowrap ${
+                        timeframe === t.id
+                          ? "bg-on-surface text-surface border-on-surface shadow-sm"
+                          : "bg-surface text-on-surface-variant/40 border-outline-variant/20"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {articles.map((art, index) => (
@@ -234,7 +309,7 @@ function TrendingContent() {
                   key={art.id}
                   ref={index === articles.length - 1 ? lastArticleRef : null}
                 >
-                  <ArticleCard 
+                  <ArticleCard
                     id={art.id}
                     source={art.source.name}
                     sourceName={art.sourceName}
@@ -268,12 +343,19 @@ function TrendingContent() {
 
               {articles.length === 0 && !loading && (
                 <div className="text-center py-32 sm:py-40 bg-surface-container-low rounded-2xl p-6">
-                  <p className="text-3xl sm:text-5xl font-semibold text-on-surface-variant/10 tracking-tighter italic font-headline">
+                  <p className="text-3xl sm:text-5xl font-semibold text-on-surface-variant/10 tracking-tighter italic font-headline mb-6">
                     Quiet Orbit.
                   </p>
-                  <p className="text-[9px] font-bold text-on-surface-variant/30 uppercase tracking-[0.3em] sm:tracking-[0.4em] mt-8">
-                    ADJUST SIGNALS TO FIND MORE DEVPULSE INTELLIGENCE.
+                  <p className="text-[9px] font-bold text-on-surface-variant/30 uppercase tracking-[0.3em] sm:tracking-[0.4em] mb-8">
+                    No signals found. Click sync to fetch fresh intelligence.
                   </p>
+                  <button
+                    onClick={runSync}
+                    disabled={syncStatus === "syncing"}
+                    className="px-6 py-3 bg-primary text-white rounded-full text-[9px] font-black uppercase tracking-widest cursor-default outline-none hover:opacity-90 transition-opacity"
+                  >
+                    {syncStatus === "syncing" ? "Syncing..." : "Fetch Signals Now"}
+                  </button>
                 </div>
               )}
             </section>
